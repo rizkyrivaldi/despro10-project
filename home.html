@@ -1,0 +1,16 @@
+<html>
+    <body>
+        <!-- <img src="http://127.0.0.1:8888/latestpic" width="500" height="600"> -->
+        <!-- <img src="http://127.0.0.1:8888/latestpic" width="800" height="600"> -->
+        <img src="http://desprokel10.ddns.net:1234/latestpic" width="800" height="600">
+        <!-- <object src="http://127.0.0.1:8888/assets/metadata.txt"></object> -->
+        <!-- <iframe src="http://127.0.0.1:8888/metadata" width="500" height="300" frameBorder="0"></iframe> -->
+        <!-- <embed src="http://127.0.0.1:8888/metadata" width="500" height="300"></embed> -->
+        <p>
+            <?php
+            $varstring = file_get_contents("assets/metadata.txt");
+            echo "Image taken at: ". $varstring;
+            ?>
+        </p>
+    </body>
+</html>
