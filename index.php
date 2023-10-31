@@ -23,6 +23,7 @@
     $latest_image = __DIR__ . "/assets/snap.jpg";
     $latest_detected = __DIR__ . "/assets/snap_detected.jpg";
     $latest_metadata = __DIR__ . "/assets/metadata.txt";
+    $json_data = __DIR__ . "/mock/mock_detection.json";
 
     // Anti bot logger file
     $antibot = __DIR__ . "/robots.txt";
@@ -51,6 +52,10 @@
         case "/metadata":
             header("Content-type: text/plain");
             readfile($latest_metadata);
+            break;
+        case "/json_data":
+            header("Content-type: application/json");
+            readfile($json_data);
             break;
         case "/robots.txt":
             header("Content-type: text/plain");
