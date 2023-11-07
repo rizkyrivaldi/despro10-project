@@ -18,13 +18,17 @@ model_path = "model/yolov4.weights"
 cfg_path =  "model/yolov4.cfg"
 classes_path = "model/classes.names"
 
+# Local Image Path
+image_path = "assets/snap.jpg"
+detected_path = "assets/snap_detected.jpg"
+
 db = firestore.client()
 
 # Frame Paths
 # image_path = "assets/street.jpg"
 # detected_path = "assets/street_detected.jpg"
-image_path = "assets/____snap.jpg"
-detected_path = "assets/snap_detected.jpg"
+# image_path = "assets/____snap.jpg"
+# detected_path = "assets/snap_detected.jpg"
 
 print(os.getcwd())
 
@@ -42,15 +46,7 @@ net = cv2.dnn.readNetFromDarknet(cfg_path,model_path)
 model = cv2.dnn_DetectionModel(net)
 model.setInputParams(size=(416,416), scale=1.0/255.0, swapRB=True, crop=False)
 
-# Get the image from file
-frame = cv2.imread(image_path)
-
-# Detect
-# class_ids, confidences, boxes = model.detect(frame, conv_threshold, nms_threshold)
-
-# indexes = range(0, len(list(class_ids)))
-
-# Public Variable
+# Public Variable Testing Image Online
 image_num = 0
 imagesUrl = [
     "https://upload.wikimedia.org/wikipedia/commons/4/49/Gambar_Buku.png", 
@@ -59,11 +55,15 @@ imagesUrl = [
     "https://static.scientificamerican.com/blogs/cache/file/6C147259-1CEB-4333-B30B7B2A6A01D777_source.jpg",
     "https://i.insider.com/51c083346bb3f7033200001c?width=1000&format=jpeg&auto=webp"]
 
-def snapImage(n):
+def snapImageOnline(n):
     # print("Image URL: " + imagesUrl[n])
     req = urllib.request.urlopen(imagesUrl[n])
     arr = np.asarray(bytearray(req.read()), dtype=np.uint8)
     img = cv2.imdecode(arr, cv2.IMREAD_COLOR)
+    return img
+
+def snapImageOffline():
+    img = cv2.imread(image_path)
     return img
 
 def getPersonCount(frame):
@@ -80,22 +80,8 @@ def getPersonCount(frame):
             cv2.putText(frame,label + " " + confidence, (x,y-10),font,1,color,1)
             if class_ids[i] == 0:
                 person_counter += 1
+    cv2.imwrite(detected_path)
     return person_counter
-
-# frame = snapImage(3)
-# class_ids, confidences, boxes = model.detect(frame, conv_threshold, nms_threshold)
-# indexes = range(0, len(list(class_ids)))
-# print(class_ids)
-# if len(list(class_ids)) > 0:
-#     for i in indexes:
-#         x,y,w,h = boxes[i]
-#         label = str(classes[class_ids[i]])
-#         confidence = str(round(confidences[i],2))
-#         color = (0, 255, 0)
-#         cv2.rectangle(frame,(x,y),(x+w,y+h),color,2)
-#         cv2.putText(frame,label + " " + confidence, (x,y-10),font,1,color,1)
-
-# cv2.imwrite(detected_path, frame)
 
 def send_data_to_firestore():
     current_time = datetime.datetime.now()
@@ -106,36 +92,36 @@ def send_data_to_firestore():
     'personCount': print_person_count_rotation(),
     'time': formatted_time
     }
-    print("Send Data to Firestore {data}")
+    print(f"Send Data to Firestore {data}")
     doc_ref.set(data)
 
 def print_person_count_rotation():
-    global image_num
+    # global image_num
 
     # Snap Image
-    image = snapImage(image_num)
+    # image = snapImageOnline(image_num)
+    image = snapImageOffline()
 
     # Detect person count
     counter = getPersonCount(image)
 
-    print("URL : " + imagesUrl[image_num])
+    # print("URL : " + imagesUrl[image_num])
+    print("Person counted")
     print(counter)
 
-    if image_num > len(imagesUrl):
-        image_num = 0
-    else:
-        image_num += 1
+    # if image_num > len(imagesUrl):
+    #     image_num = 0
+    # else:
+    #     image_num += 1
 
     return counter
 
 
+# schedule.every(5).seconds.do(send_data_to_firestore)
 
-schedule.every(5).seconds.do(send_data_to_firestore)
-# schedule.every(5).seconds.do(print_person_count_rotation)
-
-while True:
-    schedule.run_pending()
-    time.sleep(1)
+# while True:
+#     schedule.run_pending()
+#     time.sleep(1)
 
 # print("Data posted to Firestore.")
 
@@ -143,3 +129,6 @@ while True:
 # print(confidences)
 # print(boxes)
 # print("Person detected: " + str(person_counter))
+
+if __name__ == "__main__":
+    send_data_to_firestore()
