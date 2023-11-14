@@ -17,10 +17,12 @@ import pandas as pd
 import datetime
 import xml.etree.ElementTree as ET
 import json
-# import os
 
 # Import Config
 from config import Config
+
+# Import for testing
+import random
 
 # Global Variable for testing
 # Public Variable Testing Image Online
@@ -59,13 +61,27 @@ class Detector():
         arr = np.asarray(bytearray(req.read()), dtype=np.uint8)
         self.img = cv2.imdecode(arr, cv2.IMREAD_COLOR)
 
-    def __snapImageOffline(self):
-        self.img = cv2.imread(self.image_path)
+    def __snapImageOffline(self, testing = False):
+        if not testing:
+            self.img = cv2.imread(self.image_path)
+        else:
+            target_dir = os.path.join(os.getcwd(), "testing")
+            img_list = os.listdir(target_dir)
+            list_last_file = len(img_list) - 1
+            
+            # Randomize image input
+            random.seed(datetime.datetime.now().timestamp())
+            index = random.randint(0, list_last_file)
+
+            # Get the image
+            random_img = os.path.join(target_dir, img_list[index])
+            self.img = cv2.imread(random_img)
+
 
     def getPersonCount(self, from_web = False, save_image = True):
         # Image Selection
         if not from_web:
-            self.__snapImageOffline()
+            self.__snapImageOffline(testing = False)
         else:
             self.__snapImageOnline(4)
         
@@ -108,7 +124,7 @@ class Firebase():
 
 class Database():
 
-    def __init__(self, json_latest, json_chart, json_database, current_time):
+    def __init__(self, json_latest, json_chart, json_database, current_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")):
         self.json_latest = json_latest
         self.json_chart = json_chart
         self.json_database = json_database
@@ -151,7 +167,7 @@ class Database():
 
         # Membuat list
         json_dict_format = ['1hrs', '2hrs', '3hrs', '6hrs', '12hrs', '1day', '3day', '7day']
-        json_dict_hours = [1, 3, 6, 12, 24, 24*3, 24*7]
+        json_dict_hours = [1, 2, 3, 6, 12, 24, 24*3, 24*7]
         json_dict = dict()
         json_dict['now'] = {
             'count' : str(num_people[data_length-1]),
@@ -180,7 +196,6 @@ class Database():
 
                     # Update counter
                     json_dict['history'][json_dict_format[logging_format]]['count'].append(str(num_people[i])) 
-                    break
 
         # print(json_dict)
         json_chart_string = json.dumps(json_dict, indent=4)
@@ -190,6 +205,7 @@ class Database():
         file.close()
         
     def appendCsv(self, data):
+
         # Mendapatkan tanggal, waktu, dan jumlah orang
         access_datetime = data["time"]
         num_people = data["personCount"]
@@ -218,18 +234,14 @@ class Database():
 
         else:
             print("Unable to export to JSON since the database is empty")
-    
 
-if __name__ == "__main__":
-    # Determine time this program runs
+    def updateTime(self, time):
+        self.current_time = time
+    
+def main(cfg, firebase, detector, database):
+    # Determine time this function runs
     current_time = datetime.datetime.now()
     formatted_time = current_time.strftime("%Y-%m-%d %H:%M:%S")
-
-    # Init classes
-    cfg = Config()
-    firebase = Firebase(cfg.firebase_certificate)
-    detector = Detector(cfg.model_path, cfg.cfg_path, cfg.classes_path, cfg.image_path, cfg.detected_path)
-    database = Database(cfg.json_latest, cfg.json_chart, cfg.json_database, current_time)
 
     # Detect person count
     # person_count = detector.getPersonCount(from_web = True)
@@ -240,9 +252,13 @@ if __name__ == "__main__":
         'personCount': person_count,
         'time': formatted_time
     }
+    print("Data successfully stored: " + str(data))
 
     # Send data to firebase
     # firebase.send_data_to_firestore(data)
+
+    # Update database current time
+    database.updateTime(current_time)
 
     # Save the data to csv
     database.appendCsv(data)
@@ -250,7 +266,20 @@ if __name__ == "__main__":
     # Export the data to json
     database.toJson()
 
+if __name__ == "__main__":
+    # Init classes
+    cfg = Config()
+    firebase = Firebase(cfg.firebase_certificate)
+    detector = Detector(cfg.model_path, cfg.cfg_path, cfg.classes_path, cfg.image_path, cfg.detected_path)
+    database = Database(cfg.json_latest, cfg.json_chart, cfg.json_database)
 
+    main(cfg, firebase, detector, database)
+
+    schedule.every(5).minutes.do(main, cfg, firebase, detector, database)
+
+    while True:
+        schedule.run_pending()
+        time.sleep(1)
 
 
 

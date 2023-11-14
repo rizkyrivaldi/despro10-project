@@ -59,11 +59,11 @@
             header("Content-type: application/json");
             readfile($json_data);
             break;
-        case "latest_json":
+        case "/latest_json":
             header("Content-type: application/json");
             readfile($latest_json);
             break;
-        case "chart_json":
+        case "/chart_json":
             header("Content-type: application/json");
             readfile($chart_json);
             break;

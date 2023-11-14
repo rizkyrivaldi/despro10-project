@@ -22,4 +22,4 @@ testing/*
 
 __pycache__/*
 
-json/*
+json/database.csv
